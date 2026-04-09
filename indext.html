@@ -1,1 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horaires">
+<title>Tracker Horaires</title>
+<style>
+:root {
+  --bg: #0f0f0f; --bg2: #1a1a1a; --bg3: #242424; --bg4: #2e2e2e;
+  --border: rgba(255,255,255,0.09); --border2: rgba(255,255,255,0.16);
+  --text: #f0f0f0; --text2: #888; --text3: #555;
+  --green: #34d399; --green-bg: rgba(52,211,153,0.12); --green-border: rgba(52,211,153,0.3);
+  --blue: #60a5fa; --blue-bg: rgba(96,165,250,0.12); --blue-border: rgba(96,165,250,0.3);
+  --radius: 12px; --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px); --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f5f5f5; --bg2: #ffffff; --bg3: #ebebeb; --bg4: #e0e0e0; --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.14); --text: #111; --text2: #666; --text3: #aaa; }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;color:var(--text);}
+.app{display:flex;flex-direction:column;height:100%;padding-top:var(--safe-top);}
+.header{padding:14px 18px 10px;border-bottom:0.5px solid var(--border);flex-shrink:0}
+.header-top{display:flex;align-items:center;justify-content:space-between;}
+.header-day{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em}
+.header-date{font-size:17px;font-weight:600;}
+.nav-arrow{background:var(--bg3);border:0.5px solid var(--border);border-radius:20px;color:var(--text2);font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.tabs{display:flex;background:var(--bg3);margin:10px 14px 0;border-radius:var(--radius-sm);padding:3px;flex-shrink:0}
+.tab{flex:1;padding:7px;font-size:12px;font-weight:500;background:none;border:none;color:var(--text2);border-radius:6px;cursor:pointer;}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.content{flex:1;overflow-y:auto;padding:12px 14px;padding-bottom:calc(16px + var(--safe-bot));}
+.panel{display:none}.panel.active{display:block}
+.svc{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.svc.off{opacity:0.5}
+.svc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.svc-label{font-size:11px;text-transform:uppercase;color:var(--text2);font-weight:600}
+.svc-dur{font-size:13px;font-weight:600;}
+.tog{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;}
+.tog.on{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.time-row{display:flex;align-items:center;margin-bottom:10px;gap:10px}
+.time-label{font-size:11px;color:var(--text2);min-width:54px;}
+.drums{display:flex;align-items:center;gap:3px}
+.drum{width:52px;height:88px;overflow:hidden;position:relative;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius-sm);touch-action:none;}
+.drum-sel{position:absolute;top:50%;left:0;right:0;height:30px;transform:translateY(-50%);border-top:1px solid var(--border2);border-bottom:1px solid var(--border2);z-index:1;pointer-events:none}
+.drum-list{position:absolute;left:0;right:0;top:0;will-change:transform}
+.drum-item{height:30px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--text)}
+.time-val{font-size:15px;font-weight:600;min-width:44px}
+.time-val.in{color:var(--green)}
+.time-val.out{color:var(--blue)}
+.time-val.off{color:var(--text3)}
+.sum-bar{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
+.sum-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.sum-col label{font-size:10px;text-transform:uppercase;color:var(--text2);display:block;}
+.sum-col span{font-size:18px;font-weight:600;}
+.save-btn{width:100%;padding:14px;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--radius);font-size:15px;font-weight:600;color:var(--text);cursor:pointer;}
+.save-btn.saved{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cdow{font-size:10px;color:var(--text3);text-align:center;padding:4px 0;}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:8px;cursor:pointer;color:var(--text3);position:relative;}
+.cd.has::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--blue)}
+.cd.sel{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.big-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.hr-item{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;justify-content:space-between;margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="nav-arrow" onclick="nd(-1)">‹</div>
+      <div style="text-align:center">
+        <div class="header-day" id="dn"></div>
+        <div class="header-date" id="dd"></div>
+      </div>
+      <div class="nav-arrow" onclick="nd(1)">›</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="sw('day',this)">Journée</button>
+    <button class="tab" onclick="sw('cal',this)">Calendrier</button>
+    <button class="tab" onclick="sw('sum',this)">Résumés</button>
+  </div>
+
+  <div class="content">
+    <!-- JOURNÉE -->
+    <div class="panel active" id="p-day">
+      <div class="svc off" id="svc-midi">
+        <div class="svc-head">
+          <span class="svc-label">Service midi</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="svc-dur" id="dur-m">—</span>
+            <button class="tog" id="tog-midi" onclick="toggleSvc('midi')">Travaillé</button>
+          </div>
+        </div>
+        <div class="time-row">
+          <span class="time-label">Arrivée</span>
+          <div class="drums" id="d-mi-in"><div class="drum" id="dh-mi-in"></div><span>:</span><div class="drum" id="dm-mi-in"></div></div>
+          <span class="time-val in off" id="tv-mi-in">--:--</span>
+        </div>
+        <div class="time-row">
+          <span class="time-label">Départ</span>
+          <div class="drums" id="d-mi-out"><div class="drum" id="dh-mi-out"></div><span>:</span><div class="drum" id="dm-mi-out"></div></div>
+          <span class="time-val out off" id="tv-mi-out">--:--</span>
+        </div>
+      </div>
+
+      <div class="svc off" id="svc-soir">
+        <div class="svc-head">
+          <span class="svc-label">Service soir</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="svc-dur" id="dur-s">—</span>
+            <button class="tog" id="tog-soir" onclick="toggleSvc('soir')">Travaillé</button>
+          </div>
+        </div>
+        <div class="time-row">
+          <span class="time-label">Arrivée</span>
+          <div class="drums" id="d-so-in"><div class="drum" id="dh-so-in"></div><span>:</span><div class="drum" id="dm-so-in"></div></div>
+          <span class="time-val in off" id="tv-so-in">--:--</span>
+        </div>
+        <div class="time-row">
+          <span class="time-label">Départ</span>
+          <div class="drums" id="d-so-out"><div class="drum" id="dh-so-out"></div><span>:</span><div class="drum" id="dm-so-out"></div></div>
+          <span class="time-val out off" id="tv-so-out">--:--</span>
+        </div>
+      </div>
+
+      <div class="sum-bar">
+        <div class="sum-cols">
+          <div class="sum-col"><label>Midi</label><span id="sm">—</span></div>
+          <div class="sum-col"><label>Soir</label><span id="ss">—</span></div>
+          <div class="sum-col"><label>Total</label><span style="color:var(--blue)" id="stot">—</span></div>
+        </div>
+      </div>
+      <button class="save-btn" id="savebtn" onclick="saveDay()">Enregistrer</button>
+    </div>
+
+    <!-- CALENDRIER -->
+    <div class="panel" id="p-cal">
+      <div id="cal-title" style="text-align:center;font-weight:600;margin-bottom:10px"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- RÉSUMÉS -->
+    <div class="panel" id="p-sum">
+        <div id="sum-label" style="text-align:center;font-weight:600;margin-bottom:15px"></div>
+        <div id="sum-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DF=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'], MF=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'], PFX='wt6_', IH=30, MINS=[0,5,10,15,20,25,30,35,40,45,50,55];
+const CFG={midi:{in:{h:[9,10,11,12],m:MINS},out:{h:[13,14,15,16],m:MINS},defIn:{h:2,m:9},defOut:{h:0,m:0}},soir:{in:{h:[17,18,19,20],m:MINS},out:{h:[21,22,23,0],m:MINS},defIn:{h:1,m:10},defOut:{h:0,m:0}}};
+let curDate=new Date(), S={midi:{on:false,inH:0,inM:0,outH:0,outM:0},soir:{on:false,inH:0,inM:0,outH:0,outM:0}};
+
+function dk(d){return d.toISOString().slice(0,10)}
+function pad(n){return n<10?'0'+n:''+n}
+function toMin(h,m){return h*60+m}
+function hmFmt(m){return Math.floor(m/60)+'h'+pad(m%60)}
+function calcDur(h1,m1,h2,m2){let a=toMin(h1,m1),b=toMin(h2,m2);if(b<=a)b+=1440;return b-a}
+
+function buildDrum(el,items){
+  el.innerHTML='<div class="drum-sel"></div><div class="drum-list"></div>';
+  const list=el.querySelector('.drum-list');
+  [null,null,...items,null,null].forEach(v=>{const d=document.createElement('div');d.className='drum-item';d.textContent=v!==null?pad(v):'';list.appendChild(d);});
+}
+function setDrumPos(el,idx){const list=el.querySelector('.drum-list');if(list)list.style.transform=`translateY(${-(idx+2)*IH+44-IH/2}px)`;}
+
+function attachDrum(el,svc,type,col){
+  let sy=0,si=0,active=false; const cfg=CFG[svc][type][col], key=type+(col==='h'?'H':'M');
+  const move=(y)=>{if(!active)return; let i=si+Math.round((sy-y)/IH); i=Math.max(0,Math.min(cfg.length-1,i)); S[svc][key]=i; setDrumPos(el,i); updateTV(svc,type);};
+  el.addEventListener('touchstart',e=>{if(!S[svc].on)return; sy=e.touches[0].clientY; si=S[svc][key]; active=true;},{passive:true});
+  el.addEventListener('touchmove',e=>{if(active){e.preventDefault();move(e.touches[0].clientY);}},{passive:false});
+  el.addEventListener('touchend',()=>{active=false; rDay();});
+}
+
+function updateTV(svc,type){
+  const t={h:CFG[svc][type].h[S[svc][type+'H']],m:CFG[svc][type].m[S[svc][type+'M']]};
+  const el=document.getElementById('tv-'+(svc==='midi'?'mi':'so')+'-'+type);
+  el.textContent=pad(t.h)+':'+pad(t.m); el.className='time-val '+(type==='in'?'in':'out')+(S[svc].on?'':' off');
+}
+
+function initDrums(){
+  ['midi','soir'].forEach(svc=>{ ['in','out'].forEach(type=>{ ['h','m'].forEach(col=>{
+    const el=document.getElementById('d'+col+'-'+(svc==='midi'?'mi':'so')+'-'+type);
+    buildDrum(el,CFG[svc][type][col]); setDrumPos(el,S[svc][type+(col==='h'?'H':'M')]); attachDrum(el,svc,type,col);
+  }); updateTV(svc,type);});});
+}
+
+function toggleSvc(svc){
+  S[svc].on=!S[svc].on; if(S[svc].on){S[svc].inH=CFG[svc].defIn.h; S[svc].inM=CFG[svc].defIn.m; S[svc].outH=CFG[svc].defOut.h; S[svc].outM=CFG[svc].defOut.m;}
+  initDrums(); rDay();
+}
+
+function rDay(){
+  document.getElementById('dn').textContent=DF[curDate.getDay()];
+  document.getElementById('dd').textContent=curDate.getDate()+' '+MF[curDate.getMonth()];
+  ['midi','soir'].forEach(svc=>{
+    const dId=svc==='midi'?'m':'s', pfx=svc==='midi'?'mi':'so', durEl=document.getElementById('dur-'+dId);
+    document.getElementById('tog-'+svc).className='tog'+(S[svc].on?' on':'');
+    document.getElementById('svc-'+svc).className='svc'+(S[svc].on?'':' off');
+    let d=null; if(S[svc].on){
+      const i={h:CFG[svc].in.h[S[svc].inH],m:CFG[svc].in.m[S[svc].inM]}, o={h:CFG[svc].out.h[S[svc].outH],m:CFG[svc].out.m[S[svc].outM]};
+      d=calcDur(i.h,i.m,o.h,o.m);
+    }
+    durEl.textContent=d?hmFmt(d):'—'; document.getElementById('s'+dId).textContent=d?hmFmt(d):'—';
+  });
+  const mD=S.midi.on?calcDur(CFG.midi.in.h[S.midi.inH],CFG.midi.in.m[S.midi.inM],CFG.midi.out.h[S.midi.outH],CFG.midi.out.m[S.midi.outM]):0;
+  const sD=S.soir.on?calcDur(CFG.soir.in.h[S.soir.inH],CFG.soir.in.m[S.soir.inM],CFG.soir.out.h[S.soir.outH],CFG.soir.out.m[S.soir.outM]):0;
+  document.getElementById('stot').textContent=(mD+sD)>0?hmFmt(mD+sD):'—';
+  document.getElementById('savebtn').className='save-btn'; document.getElementById('savebtn').textContent='Enregistrer';
+}
+
+function saveDay(){
+  localStorage.setItem(PFX+dk(curDate),JSON.stringify(S));
+  const b=document.getElementById('savebtn'); b.className='save-btn saved'; b.textContent='✓ Enregistré';
+}
+
+function nd(n){curDate.setDate(curDate.getDate()+n); const d=localStorage.getItem(PFX+dk(curDate)); S=d?JSON.parse(d):{midi:{on:false,inH:0,inM:0,outH:0,outM:0},soir:{on:false,inH:0,inM:0,outH:0,outM:0}}; initDrums(); rDay();}
+
+function sw(t,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById('p-'+t).classList.add('active');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active')); el.classList.add('active');
+  if(t==='cal')rCal(); if(t==='sum')rSum();
+}
+
+function rCal(){
+  const g=document.getElementById('cal-grid'); g.innerHTML=''; document.getElementById('cal-title').textContent=MF[curDate.getMonth()];
+  ['L','M','M','J','V','S','D'].forEach(d=>{const e=document.createElement('div');e.className='cdow';e.textContent=d;g.appendChild(e)});
+  const start=new Date(curDate.getFullYear(),curDate.getMonth(),1), offset=(start.getDay()+6)%7;
+  for(let i=0;i<offset;i++) g.appendChild(document.createElement('div'));
+  for(let i=1;i<=new Date(curDate.getFullYear(),curDate.getMonth()+1,0).getDate();i++){
+    const dt=new Date(curDate.getFullYear(),curDate.getMonth(),i), e=document.createElement('div'); e.className='cd';
+    if(localStorage.getItem(PFX+dk(dt))) e.classList.add('has');
+    if(dk(dt)===dk(curDate)) e.classList.add('sel');
+    e.textContent=i; e.onclick=()=>{curDate=dt; nd(0); sw('day',document.querySelectorAll('.tab')[0])}; g.appendChild(e);
+  }
+}
+
+function rSum(){
+  let totalMins=0, count=0; const keys=[]; for(let i=0;i<localStorage.length;i++) if(localStorage.key(i).startsWith(PFX)) keys.push(localStorage.key(i));
+  keys.sort().forEach(k=>{
+    const d=JSON.parse(localStorage.getItem(k)); let dayMins=0;
+    if(d.midi.on) dayMins+=calcDur(CFG.midi.in.h[d.midi.inH],CFG.midi.in.m[d.midi.inM],CFG.midi.out.h[d.midi.outH],CFG.midi.out.m[d.midi.outM]);
+    if(d.soir.on) dayMins+=calcDur(CFG.soir.in.h[d.soir.inH],CFG.soir.in.m[d.soir.inM],CFG.soir.out.h[d.soir.outH],d.soir.outM?0:CFG.soir.out.h[d.soir.outH],CFG.soir.out.m[d.soir.outM]); // simplified
+    // correction du calcul soir pour le résumé
+    if(d.soir.on) {
+        const ih=CFG.soir.in.h[d.soir.inH], im=CFG.soir.in.m[d.soir.inM], oh=CFG.soir.out.h[d.soir.outH], om=CFG.soir.out.m[d.soir.outM];
+        let sm=toMin(oh,om)-toMin(ih,im); if(sm<=0)sm+=1440; totalMins+=sm;
+    }
+    if(d.midi.on){
+        const ih=CFG.midi.in.h[d.midi.inH], im=CFG.midi.in.m[d.midi.inM], oh=CFG.midi.out.h[d.midi.outH], om=CFG.midi.out.m[d.midi.outM];
+        totalMins+=(toMin(oh,om)-toMin(ih,im));
+    }
+  });
+  document.getElementById('sum-label').textContent="Total cumulé";
+  document.getElementById('sum-content').innerHTML=`<div class="big-card"><div style="font-size:11px;color:var(--text2)">HEURES TOTALES</div><div style="font-size:24px;font-weight:700">${hmFmt(totalMins)}</div></div>`;
+}
+
+initDrums(); rDay();
+</script>
+</body>
+</html>
 
