@@ -1,1 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tracker Horaires Final</title>
+<style>
+:root {
+  --bg: #f2f2f7; --bg2: #ffffff; --bg3: #e5e5ea;
+  --text: #000; --text2: #8e8e93; --blue: #007aff; --green: #34c759;
+  --radius: 12px; --ih: 32px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #000000; --bg2: #1c1c1e; --bg3: #2c2c2e; --text: #fff; --text2: #8e8e93; }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);font-family:-apple-system,sans-serif;color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* Header */
+.header{padding:15px;text-align:center;margin-top:env(safe-area-inset-top);}
+.nav-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.nav-btn{background:var(--bg3);border:none;color:var(--text);width:34px;height:34px;border-radius:50%;font-size:18px;}
+
+/* Tabs */
+.tabs{display:flex;background:var(--bg3);margin:0 15px 15px;border-radius:10px;padding:2px;}
+.tab{flex:1;padding:8px;border:none;background:none;color:var(--text2);font-size:13px;font-weight:600;border-radius:8px;}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+
+.content{flex:1;overflow-y:auto;padding:0 15px 120px;}
+.panel{display:none;} .panel.active{display:block;}
+
+/* Cards */
+.card{background:var(--bg2);border-radius:var(--radius);padding:15px;margin-bottom:12px;}
+.card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.tag{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text2);}
+.dur-tag{font-size:14px;font-weight:700;color:var(--blue);}
+
+/* LA FIX POUR LES ROULETTES */
+.row{display:flex;align-items:center;margin-bottom:10px;gap:10px;}
+.lbl{font-size:12px;width:40px;color:var(--text2);}
+.drum-container{
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg3); border-radius:10px; padding:4px;
+  height:100px; flex:1; overflow:hidden; position:relative;
+}
+.drum-wrapper{
+  width:45px; height:96px; /* 3 items de 32px */
+  overflow:hidden; position:relative; touch-action:none;
+}
+.drum-list{
+  position:absolute; width:100%; top:0; left:0;
+  transition:transform 0.15s ease-out; pointer-events:none;
+}
+.drum-item{
+  height:32px; display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:700; color:var(--text); opacity:0.2;
+}
+.drum-item.active{opacity:1; color:var(--blue);}
+.drum-selection-overlay{
+  position:absolute; top:32px; left:0; right:0; height:32px;
+  border-top:1px solid rgba(0,0,0,0.1); border-bottom:1px solid rgba(0,0,0,0.1);
+  background:rgba(255,255,255,0.05); pointer-events:none;
+}
+
+/* Résumés */
+.s-tabs{display:flex;gap:4px;margin-bottom:15px;}
+.s-tab{flex:1;padding:7px;font-size:10px;font-weight:700;border:none;background:var(--bg3);color:var(--text2);border-radius:6px;}
+.s-tab.active{background:var(--blue);color:white;}
+.hist-item{display:flex;justify-content:space-between;padding:12px 0;border-bottom:0.5px solid var(--bg3);}
+
+.btn-save{
+  position:fixed; bottom:30px; left:15px; right:15px;
+  padding:16px; background:var(--blue); color:white;
+  border:none; border-radius:14px; font-size:16px; font-weight:700;
+  box-shadow:0 4px 12px rgba(0,122,255,0.3);
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="nav-row">
+      <button class="nav-btn" onclick="changeDate(-1)">‹</button>
+      <div><div id="d-day" style="font-size:11px;color:var(--text2);font-weight:700">JEUDI</div><div id="d-date" style="font-size:20px;font-weight:800">9 Avril</div></div>
+      <button class="nav-btn" onclick="changeDate(1)">›</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="swTab('day',this)">SAISIE</button>
+    <button class="tab" onclick="swTab('sum',this)">RÉSUMÉS</button>
+  </div>
+
+  <div class="content">
+    <div id="p-day" class="panel active">
+      <div class="card" id="c-midi">
+        <div class="card-hd"><span class="tag">Midi</span><span class="dur-tag" id="t-m">0h00</span><input type="checkbox" id="chk-midi" onchange="upd()"></div>
+        <div class="row"><span class="lbl">Début</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="mi-in-h"></div><div class="drum-wrapper" id="mi-in-m"></div></div></div>
+        <div class="row"><span class="lbl">Fin</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="mi-out-h"></div><div class="drum-wrapper" id="mi-out-m"></div></div></div>
+      </div>
+      <div class="card" id="c-soir">
+        <div class="card-hd"><span class="tag">Soir</span><span class="dur-tag" id="t-s">0h00</span><input type="checkbox" id="chk-soir" onchange="upd()"></div>
+        <div class="row"><span class="lbl">Début</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="so-in-h"></div><div class="drum-wrapper" id="so-in-m"></div></div></div>
+        <div class="row"><span class="lbl">Fin</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="so-out-h"></div><div class="drum-wrapper" id="so-out-m"></div></div></div>
+      </div>
+      <div class="card" id="c-full">
+        <div class="card-hd"><span class="tag">Continue</span><span class="dur-tag" id="t-f">0h00</span><input type="checkbox" id="chk-full" onchange="upd()"></div>
+        <div class="row"><span class="lbl">Début</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="fu-in-h"></div><div class="drum-wrapper" id="fu-in-m"></div></div></div>
+        <div class="row"><span class="lbl">Fin</span><div class="drum-container"><div class="drum-selection-overlay"></div><div class="drum-wrapper" id="fu-out-h"></div><div class="drum-wrapper" id="fu-out-m"></div></div></div>
+      </div>
+    </div>
+
+    <div id="p-sum" class="panel">
+      <div class="s-tabs">
+        <button class="s-tab active" onclick="swSum('day',this)">JOUR</button>
+        <button class="s-tab" onclick="swSum('week',this)">SEMAINE</button>
+        <button class="s-tab" onclick="swSum('month',this)">MOIS</button>
+        <button class="s-tab" onclick="swSum('year',this)">ANNÉE</button>
+      </div>
+      <div class="card" style="text-align:center"><div class="tag" id="st-title">Total</div><div id="st-total" style="font-size:32px;font-weight:900;color:var(--blue);margin:5px 0;">0h00</div></div>
+      <div class="card" id="st-list" style="padding:10px 15px"></div>
+    </div>
+  </div>
+  <button class="btn-save" onclick="save()">ENREGISTRER</button>
+</div>
+
+<script>
+const HOURS = Array.from({length: 24}, (_, i) => i);
+const MINS = Array.from({length: 60}, (_, i) => i);
+const DAYS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+let curDate = new Date();
+let range = 'day';
+let data = { midi:{on:false,ih:11,im:0,oh:15,om:0}, soir:{on:false,ih:18,im:30,oh:23,om:0}, full:{on:false,ih:9,im:0,oh:17,om:0} };
+
+function buildDrum(id, vals, svc, key) {
+  const el = document.getElementById(id);
+  el.innerHTML = '<div class="drum-list"></div>';
+  const list = el.querySelector('.drum-list');
+  [null, ...vals, null].forEach(v => {
+    const d = document.createElement('div'); d.className = 'drum-item';
+    d.textContent = v !== null ? String(v).padStart(2,'0') : '';
+    list.appendChild(d);
+  });
+  let sy, si;
+  el.addEventListener('touchstart', e => { sy = e.touches[0].clientY; si = data[svc][key]; }, {passive:true});
+  el.addEventListener('touchmove', e => {
+    e.preventDefault();
+    let move = Math.round((sy - e.touches[0].clientY) / 32);
+    let v = Math.max(0, Math.min(vals.length-1, si + move));
+    if(data[svc][key] !== v) { data[svc][key] = v; renderDrums(); upd(); }
+  }, {passive:false});
+}
+
+function renderDrums() {
+  const configs = [
+    {id:'mi-in-h', s:'midi', k:'ih'}, {id:'mi-in-m', s:'midi', k:'im'}, {id:'mi-out-h', s:'midi', k:'oh'}, {id:'mi-out-m', s:'midi', k:'om'},
+    {id:'so-in-h', s:'soir', k:'ih'}, {id:'so-in-m', s:'soir', k:'im'}, {id:'so-out-h', s:'soir', k:'oh'}, {id:'so-out-m', s:'soir', k:'om'},
+    {id:'fu-in-h', s:'full', k:'ih'}, {id:'fu-in-m', s:'full', k:'im'}, {id:'fu-out-h', s:'full', k:'oh'}, {id:'fu-out-m', s:'full', k:'om'}
+  ];
+  configs.forEach(c => {
+    const list = document.getElementById(c.id).querySelector('.drum-list');
+    list.style.transform = `translateY(${-(data[c.s][c.k] * 32)}px)`;
+    list.querySelectorAll('.drum-item').forEach((item, i) => item.classList.toggle('active', i === data[c.s][c.k]+1));
+  });
+}
+
+function upd() {
+  data.midi.on = document.getElementById('chk-midi').checked;
+  data.soir.on = document.getElementById('chk-soir').checked;
+  data.full.on = document.getElementById('chk-full').checked;
+
+  if(data.full.on && (data.midi.on || data.soir.on)) { data.midi.on = data.soir.on = false; document.getElementById('chk-midi').checked = document.getElementById('chk-soir').checked = false; }
+  
+  document.getElementById('d-day').textContent = DAYS[curDate.getDay()];
+  document.getElementById('d-date').textContent = curDate.getDate() + ' ' + MONTHS[curDate.getMonth()];
+
+  ['midi','soir','full'].forEach(k => {
+    let s = data[k], start = s.ih*60+s.im, end = s.oh*60+s.om;
+    if(end <= start) end += 1440;
+    let diff = s.on ? end-start : 0;
+    document.getElementById('t-'+k.charAt(0)).textContent = Math.floor(diff/60)+'h'+String(diff%60).padStart(2,'0');
+    document.getElementById('c-'+k).style.opacity = s.on ? '1' : '0.4';
+  });
+  if(document.getElementById('p-sum').classList.contains('active')) renderSum();
+}
+
+function save() {
+  localStorage.setItem('w_'+curDate.toISOString().split('T')[0], JSON.stringify(data));
+  alert("Enregistré !");
+}
+
+function changeDate(n) {
+  curDate.setDate(curDate.getDate()+n);
+  let saved = localStorage.getItem('w_'+curDate.toISOString().split('T')[0]);
+  if(saved) data = JSON.parse(saved);
+  else data = { midi:{on:false,ih:11,im:0,oh:15,om:0}, soir:{on:false,ih:18,im:30,oh:23,om:0}, full:{on:false,ih:9,im:0,oh:17,om:0} };
+  document.getElementById('chk-midi').checked = data.midi.on;
+  document.getElementById('chk-soir').checked = data.soir.on;
+  document.getElementById('chk-full').checked = data.full.on;
+  renderDrums(); upd();
+}
+
+function swTab(id,el) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+id).classList.add('active'); el.classList.add('active');
+  if(id==='sum') renderSum();
+}
+
+function swSum(r,el) {
+  range = r; document.querySelectorAll('.s-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderSum();
+}
+
+function getM(k) {
+  let d = localStorage.getItem(k); if(!d) return 0;
+  let s = JSON.parse(d); let tot = 0;
+  ['midi','soir','full'].forEach(x => { if(s[x].on) { let a=s[x].ih*60+s[x].im, b=s[x].oh*60+s[x].om; if(b<=a)b+=1440; tot+=b-a; } });
+  return tot;
+}
+
+function renderSum() {
+  const list = document.getElementById('st-list'); list.innerHTML = '';
+  let tot = 0, d = new Date(curDate);
+  if(range==='day') {
+    let m=getM('w_'+d.toISOString().split('T')[0]); tot=m;
+    list.innerHTML = `<div class="hist-item"><span>Aujourd'hui</span><b>${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}</b></div>`;
+  } else if(range==='week') {
+    d.setDate(d.getDate() - (d.getDay()+6)%7);
+    for(let i=0;i<7;i++){
+      let m=getM('w_'+d.toISOString().split('T')[0]); tot+=m;
+      if(m>0) list.innerHTML += `<div class="hist-item"><span>${DAYS[d.getDay()]} ${d.getDate()}</span><b>${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}</b></div>`;
+      d.setDate(d.getDate()+1);
+    }
+  } else if(range==='month') {
+    let mth = d.getMonth(), yr = d.getFullYear();
+    for(let i=1;i<=31;i++){
+      let curr = new Date(yr,mth,i); if(curr.getMonth()!==mth) break;
+      let m=getM('w_'+curr.toISOString().split('T')[0]); tot+=m;
+      if(m>0) list.innerHTML += `<div class="hist-item"><span>${i} ${MONTHS[mth].slice(0,3)}</span><b>${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}</b></div>`;
+    }
+  } else {
+    for(let i=0;i<12;i++){
+      let mt=0; for(let j=1;j<=31;j++) { mt+=getM(`w_${d.getFullYear()}-${String(i+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`); }
+      if(mt>0) { list.innerHTML += `<div class="hist-item"><span>${MONTHS[i]}</span><b>${Math.floor(mt/60)}h${String(mt%60).padStart(2,'0')}</b></div>`; tot+=mt; }
+    }
+  }
+  document.getElementById('st-total').textContent = Math.floor(tot/60)+'h'+String(tot%60).padStart(2,'0');
+}
+
+// Init
+const cfg = [['mi-in-h',HOURS,'midi','ih'],['mi-in-m',MINS,'midi','im'],['mi-out-h',HOURS,'midi','oh'],['mi-out-m',MINS,'midi','om'],
+             ['so-in-h',HOURS,'soir','ih'],['so-in-m',MINS,'soir','im'],['so-out-h',HOURS,'soir','oh'],['so-out-m',MINS,'soir','om'],
+             ['fu-in-h',HOURS,'full','ih'],['fu-in-m',MINS,'full','im'],['fu-out-h',HOURS,'full','oh'],['fu-out-m',MINS,'full','om']];
+cfg.forEach(c => buildDrum(c[0],c[1],c[2],c[3]));
+changeDate(0);
+</script>
+</body>
+</html>
 
