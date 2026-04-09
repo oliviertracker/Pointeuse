@@ -1,1 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Pointeuse Pro</title>
+    <style>
+        :root {
+            --bg: #f2f2f7; --card: #ffffff; --text: #000; --blue: #007aff; --dim: #8e8e93; --border: #d1d1d6;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #000; --card: #1c1c1e; --text: #fff; --border: #38383a; }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); font-family: -apple-system, sans-serif; color: var(--text); padding-bottom: 100px; }
 
+        /* Header Fixe */
+        .header { position: sticky; top: 0; background: var(--bg); z-index: 100; padding: 50px 15px 10px; border-bottom: 0.5px solid var(--border); }
+        .nav-date { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .nav-btn { background: none; border: none; color: var(--blue); font-size: 24px; padding: 5px 15px; font-weight: bold; }
+        
+        .tabs { display: flex; background: rgba(120,120,128,0.16); border-radius: 10px; padding: 2px; }
+        .tab { flex: 1; padding: 8px; border: none; background: none; color: var(--dim); font-size: 13px; font-weight: 600; border-radius: 8px; }
+        .tab.active { background: var(--card); color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        /* Contenu */
+        .content { padding: 15px; }
+        .panel { display: none; } .panel.active { display: block; }
+
+        /* Cartes de saisie */
+        .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 15px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 0.5px solid var(--border); padding-bottom: 10px; }
+        .card-title { font-weight: 700; text-transform: uppercase; font-size: 13px; color: var(--dim); }
+        .duration { font-weight: 800; color: var(--blue); font-size: 15px; }
+
+        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .input-group label { font-size: 15px; }
+        
+        /* Sélecteur de temps iOS natif (fini les chiffres qui volent !) */
+        input[type="time"] {
+            border: none; background: var(--bg); color: var(--text); padding: 5px 10px;
+            border-radius: 6px; font-family: inherit; font-size: 16px; font-weight: 600;
+        }
+
+        /* Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .3s; border-radius: 34px; }
+        input:checked + .slider { background-color: #34c759; }
+
+        /* Résumés */
+        .sum-nav { display: flex; gap: 5px; margin-bottom: 15px; }
+        .sum-btn { flex: 1; padding: 6px; font-size: 11px; font-weight: 700; border: none; background: var(--border); border-radius: 6px; color: var(--dim); }
+        .sum-btn.active { background: var(--blue); color: #fff; }
+        .hist-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); font-size: 15px; }
+        .total-box { text-align: center; padding: 20px; }
+        .total-val { font-size: 40px; font-weight: 900; color: var(--blue); }
+
+        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 20px 15px 40px; background: var(--bg); border-top: 0.5px solid var(--border); }
+        .btn-main { width: 100%; padding: 16px; background: var(--blue); color: #fff; border: none; border-radius: 12px; font-size: 17px; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="nav-date">
+        <button class="nav-btn" onclick="moveDate(-1)">‹</button>
+        <div id="current-date" style="text-align: center;">
+            <div id="day-name" style="font-size: 12px; color: var(--dim); font-weight: 700; text-transform: uppercase;">Lundi</div>
+            <div id="day-date" style="font-size: 20px; font-weight: 800;">14 Mars</div>
+        </div>
+        <button class="nav-btn" onclick="moveDate(1)">›</button>
+    </div>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('saisie', this)">SAISIE</button>
+        <button class="tab" onclick="switchTab('resumes', this)">RÉSUMÉS</button>
+    </div>
+</div>
+
+<div class="content">
+    <!-- PANNEAU SAISIE -->
+    <div id="p-saisie" class="panel active">
+        <!-- MATIN -->
+        <div class="card" id="card-matin">
+            <div class="card-header">
+                <span class="card-title">Matin / Coupure</span>
+                <span class="duration" id="dur-matin">0h00</span>
+                <label class="switch"><input type="checkbox" id="on-matin" onchange="calc()"><span class="slider"></span></label>
+            </div>
+            <div class="input-group">
+                <label>Début</label><input type="time" id="in-matin" value="11:00" onchange="calc()">
+            </div>
+            <div class="input-group">
+                <label>Fin</label><input type="time" id="out-matin" value="15:00" onchange="calc()">
+            </div>
+        </div>
+
+        <!-- SOIR -->
+        <div class="card" id="card-soir">
+            <div class="card-header">
+                <span class="card-title">Soir / Coupure</span>
+                <span class="duration" id="dur-soir">0h00</span>
+                <label class="switch"><input type="checkbox" id="on-soir" onchange="calc()"><span class="slider"></span></label>
+            </div>
+            <div class="input-group">
+                <label>Début</label><input type="time" id="in-soir" value="18:30" onchange="calc()">
+            </div>
+            <div class="input-group">
+                <label>Fin</label><input type="time" id="out-soir" value="23:00" onchange="calc()">
+            </div>
+        </div>
+
+        <!-- CONTINUE -->
+        <div class="card" id="card-continue">
+            <div class="card-header">
+                <span class="card-title">Journée Continue</span>
+                <span class="duration" id="dur-continue">0h00</span>
+                <label class="switch"><input type="checkbox" id="on-continue" onchange="calc()"><span class="slider"></span></label>
+            </div>
+            <div class="input-group">
+                <label>Début</label><input type="time" id="in-continue" value="09:00" onchange="calc()">
+            </div>
+            <div class="input-group">
+                <label>Fin</label><input type="time" id="out-continue" value="17:00" onchange="calc()">
+            </div>
+        </div>
+    </div>
+
+    <!-- PANNEAU RÉSUMÉS -->
+    <div id="p-resumes" class="panel">
+        <div class="sum-nav">
+            <button class="sum-btn active" onclick="setRange('day', this)">JOUR</button>
+            <button class="sum-btn" onclick="setRange('week', this)">SEMAINE</button>
+            <button class="sum-btn" onclick="setRange('month', this)">MOIS</button>
+            <button class="sum-btn" onclick="setRange('year', this)">ANNÉE</button>
+        </div>
+        <div class="card total-box">
+            <div class="card-title" id="range-title">Total Journée</div>
+            <div class="total-val" id="total-val">0h00</div>
+        </div>
+        <div class="card" id="history-list">
+            <!-- Liste générée -->
+        </div>
+    </div>
+</div>
+
+<div class="save-bar">
+    <button class="btn-main" onclick="save()">ENREGISTRER LA JOURNÉE</button>
+</div>
+
+<script>
+    let curDate = new Date();
+    let curRange = 'day';
+
+    function switchTab(id, el) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('p-' + id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'resumes') renderResumes();
+    }
+
+    function setRange(r, el) {
+        curRange = r;
+        document.querySelectorAll('.sum-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        renderResumes();
+    }
+
+    function timeToMin(id) {
+        const v = document.getElementById(id).value.split(':');
+        return parseInt(v[0]) * 60 + parseInt(v[1]);
+    }
+
+    function fmt(min) {
+        return Math.floor(min/60) + 'h' + String(min%60).padStart(2,'0');
+    }
+
+    function calc() {
+        // Exclusivité : si Continue est ON, on coupe Matin et Soir
+        if (event && event.target.id === 'on-continue' && document.getElementById('on-continue').checked) {
+            document.getElementById('on-matin').checked = false;
+            document.getElementById('on-soir').checked = false;
+        } else if (event && (event.target.id === 'on-matin' || event.target.id === 'on-soir') && (document.getElementById('on-matin').checked || document.getElementById('on-soir').checked)) {
+            document.getElementById('on-continue').checked = false;
+        }
+
+        const sections = ['matin', 'soir', 'continue'];
+        sections.forEach(s => {
+            const on = document.getElementById('on-' + s).checked;
+            let d = 0;
+            if (on) {
+                let start = timeToMin('in-' + s), end = timeToMin('out-' + s);
+                if (end <= start) end += 1440;
+                d = end - start;
+            }
+            document.getElementById('dur-' + s).textContent = fmt(d);
+            document.getElementById('card-' + s).style.opacity = on ? '1' : '0.5';
+        });
+
+        const dayName = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][curDate.getDay()];
+        const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        document.getElementById('day-name').textContent = dayName;
+        document.getElementById('day-date').textContent = curDate.getDate() + ' ' + months[curDate.getMonth()];
+    }
+
+    function save() {
+        const dayKey = curDate.toISOString().split('T')[0];
+        const dayData = {
+            m: { on: document.getElementById('on-matin').checked, i: document.getElementById('in-matin').value, o: document.getElementById('out-matin').value },
+            s: { on: document.getElementById('on-soir').checked, i: document.getElementById('in-soir').value, o: document.getElementById('out-soir').value },
+            c: { on: document.getElementById('on-continue').checked, i: document.getElementById('in-continue').value, o: document.getElementById('out-continue').value }
+        };
+        localStorage.setItem('work_' + dayKey, JSON.stringify(dayData));
+        alert("Journée sauvegardée !");
+    }
+
+    function load() {
+        const dayKey = curDate.toISOString().split('T')[0];
+        const saved = localStorage.getItem('work_' + dayKey);
+        if (saved) {
+            const d = JSON.parse(saved);
+            document.getElementById('on-matin').checked = d.m.on;
+            document.getElementById('in-matin').value = d.m.i;
+            document.getElementById('out-matin').value = d.m.o;
+            document.getElementById('on-soir').checked = d.s.on;
+            document.getElementById('in-soir').value = d.s.i;
+            document.getElementById('out-soir').value = d.s.o;
+            document.getElementById('on-continue').checked = d.c.on;
+            document.getElementById('in-continue').value = d.c.i;
+            document.getElementById('out-continue').value = d.c.o;
+        } else {
+            document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+        }
+        calc();
+    }
+
+    function moveDate(n) {
+        curDate.setDate(curDate.getDate() + n);
+        load();
+        if(document.getElementById('p-resumes').classList.contains('active')) renderResumes();
+    }
+
+    function getDayMinutes(key) {
+        const data = localStorage.getItem('work_' + key);
+        if (!data) return 0;
+        const d = JSON.parse(data);
+        let tot = 0;
+        if(d.m.on) tot += calcDiff(d.m.i, d.m.o);
+        if(d.s.on) tot += calcDiff(d.s.i, d.s.o);
+        if(d.c.on) tot += calcDiff(d.c.i, d.c.o);
+        return tot;
+    }
+
+    function calcDiff(i, o) {
+        let s = parseInt(i.split(':')[0])*60 + parseInt(i.split(':')[1]);
+        let e = parseInt(o.split(':')[0])*60 + parseInt(o.split(':')[1]);
+        if (e <= s) e += 1440;
+        return e - s;
+    }
+
+    function renderResumes() {
+        const list = document.getElementById('history-list');
+        const title = document.getElementById('range-title');
+        list.innerHTML = '';
+        let total = 0;
+
+        if (curRange === 'day') {
+            title.textContent = "Total Journée";
+            total = getDayMinutes(curDate.toISOString().split('T')[0]);
+            list.innerHTML = `<div class="hist-item"><span>Détail du jour</span><b>${fmt(total)}</b></div>`;
+        } 
+        else if (curRange === 'week') {
+            title.textContent = "Total Semaine";
+            let tempDate = new Date(curDate);
+            tempDate.setDate(tempDate.getDate() - (tempDate.getDay() + 6) % 7); // Lundi
+            for(let i=0; i<7; i++) {
+                let k = tempDate.toISOString().split('T')[0];
+                let m = getDayMinutes(k);
+                total += m;
+                if(m > 0) list.innerHTML += `<div class="hist-item"><span>${['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][tempDate.getDay()]} ${tempDate.getDate()}</span><b>${fmt(m)}</b></div>`;
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+        }
+        else if (curRange === 'month') {
+            title.textContent = "Total Mois";
+            let m = curDate.getMonth(), y = curDate.getFullYear();
+            let days = new Date(y, m + 1, 0).getDate();
+            for(let i=1; i<=days; i++) {
+                let k = `${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                let mins = getDayMinutes(k);
+                total += mins;
+                if(mins > 0) list.innerHTML += `<div class="hist-item"><span>Jour ${i}</span><b>${fmt(mins)}</b></div>`;
+            }
+        }
+        else if (curRange === 'year') {
+            title.textContent = "Total Année";
+            let y = curDate.getFullYear();
+            for(let m=0; m<12; m++) {
+                let monthMins = 0;
+                let days = new Date(y, m + 1, 0).getDate();
+                for(let d=1; d<=days; d++) {
+                    monthMins += getDayMinutes(`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+                }
+                total += monthMins;
+                if(monthMins > 0) list.innerHTML += `<div class="hist-item"><span>${['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'][m]}</span><b>${fmt(monthMins)}</b></div>`;
+            }
+        }
+        document.getElementById('total-val').textContent = fmt(total);
+    }
+
+    load();
+</script>
+</body>
+</html>
